@@ -40,7 +40,7 @@ func nextDirection(puzzle *util.Puzzle, direction Direction, position, obstacle 
 		}
 
 		// VV: Turn right whenever you're about to bump into an obstacle
-		if (puzzle.Board[next.Y][next.X] != '#') && (next != obstacle) {
+		if puzzle.Board[next.Y][next.X] != '#' && next != obstacle {
 			return direction
 		}
 		direction = (direction + 1) % 4
@@ -50,10 +50,11 @@ func nextDirection(puzzle *util.Puzzle, direction Direction, position, obstacle 
 func simulate(guard image.Point, puzzle *util.Puzzle) map[image.Point]Direction {
 	visited := map[image.Point]Direction{}
 
-	fake := image.Pt(-1, -1)
 	nextDir := Up
+	obstacle := image.Pt(-100, -100)
+
 	for {
-		nextDir = nextDirection(puzzle, nextDir, guard, fake)
+		nextDir = nextDirection(puzzle, nextDir, guard, obstacle)
 
 		if nextDir == -1 {
 			break
@@ -66,29 +67,27 @@ func simulate(guard image.Point, puzzle *util.Puzzle) map[image.Point]Direction 
 	return visited
 }
 
-func obstacleCausesLoop(obstacle, guard image.Point, puzzle *util.Puzzle, c chan int) {
+func obstacleCausesLoop(obstacle, guard image.Point, puzzle *util.Puzzle, c chan bool) {
 	visited := map[image.Point]Direction{}
 
 	nextDir := Up
 	for {
 		if oldDir, seen := visited[guard]; seen && (oldDir == nextDir) {
 			// VV: been on this exact same spot before heading the same direction, therefore this is a loop
-			c <- 1
-			return
+			c <- true
 		}
 
 		visited[guard] = nextDir
 
 		nextDir = nextDirection(puzzle, nextDir, guard, obstacle)
 		if nextDir == -1 {
-			c <- 0
-			return
+			break
 		}
 
 		guard = guard.Add(deltas[nextDir])
-
 	}
 
+	c <- false
 }
 
 func solution(puzzle *util.Puzzle, logger *log.Logger) int {
@@ -112,16 +111,18 @@ func solution(puzzle *util.Puzzle, logger *log.Logger) int {
 	path := simulate(guard, puzzle)
 
 	logger.Println("Candidates are", len(path))
+	loops := 0
 
-	// VV: Not smart enough to optimize your solution? throw a bunch of threads in the mix
-	c := make(chan int, len(path))
+	c := make(chan bool)
+
 	for obstacle := range path {
 		go obstacleCausesLoop(obstacle, guard, puzzle, c)
 	}
 
-	loops := 0
 	for range path {
-		loops += <-c
+		if didLoop := <-c; didLoop {
+			loops++
+		}
 	}
 
 	return loops
