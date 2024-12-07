@@ -4,6 +4,7 @@ import (
 	"image"
 	"os"
 	"puzzle/util"
+	"time"
 
 	"log"
 )
@@ -91,6 +92,12 @@ func obstacleCausesLoop(obstacle, guard image.Point, puzzle *util.Puzzle, c chan
 
 }
 
+func worker(guard image.Point, puzzle *util.Puzzle, input chan image.Point, output chan int) {
+	for obstacle := range input {
+		obstacleCausesLoop(obstacle, guard, puzzle, output)
+	}
+}
+
 func solution(puzzle *util.Puzzle, logger *log.Logger) int {
 	guard := image.Pt(-1, -1)
 
@@ -114,15 +121,31 @@ func solution(puzzle *util.Puzzle, logger *log.Logger) int {
 	logger.Println("Candidates are", len(path))
 
 	// VV: Not smart enough to optimize your solution? throw a bunch of threads in the mix
-	c := make(chan int, len(path))
-	for obstacle := range path {
-		go obstacleCausesLoop(obstacle, guard, puzzle, c)
+	now := time.Now()
+
+	start := now.UnixNano()
+
+	const numWorkers = 128
+
+	workerOutput := make(chan int, len(path))
+	workerInput := make(chan image.Point, len(path))
+
+	for range numWorkers {
+		go worker(guard, puzzle, workerInput, workerOutput)
 	}
+
+	for obstacle := range path {
+		workerInput <- obstacle
+	}
+
+	close(workerInput)
 
 	loops := 0
 	for range path {
-		loops += <-c
+		loops += <-workerOutput
 	}
+
+	logger.Println("Duration", time.Now().UnixNano()-start)
 
 	return loops
 }
