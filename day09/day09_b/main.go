@@ -63,6 +63,14 @@ func solution(puzzle *util.Puzzle, logger *log.Logger) int {
 					blocks[idx].idx = -1
 
 					updated = true
+					for i := idx + 1; i < len(blocks); i++ {
+						if blocks[i].idx != -1 {
+							goto next_loop
+						}
+					}
+					// VV: if we got to this point everything past idx is empty!
+
+					blocks = blocks[0:idx]
 					goto next_loop
 				} else if blocks[moveToIdx].size > blocks[idx].size {
 					remainder := blocks[moveToIdx].size - blocks[idx].size
@@ -98,11 +106,11 @@ func solution(puzzle *util.Puzzle, logger *log.Logger) int {
 		idx += b.size
 	}
 
-	for _, b := range blocks {
-		b.print()
-	}
+	// for _, b := range blocks {
+	// 	b.print()
+	// }
 
-	println()
+	// println()
 
 	return sol
 }
