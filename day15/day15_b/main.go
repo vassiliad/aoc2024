@@ -112,7 +112,7 @@ func verticalMove(puzzle *util.Puzzle, pos, d image.Point, dryRun bool) bool {
 			return false
 		}
 	} else {
-		// VV: We get here, if this box is blocked by 1 or 2 boxes
+		// VV: We get here, if this box is blocked by 0 or more boxes
 		if nextRow[pos.X] == '[' {
 			// VV: No need to check for nextRow[pos.X+1] == ']' (it implies nextRow[pos.X] == '[')
 			if !verticalMove(puzzle, next, d, dryRun) {
