@@ -84,9 +84,6 @@ func verticalMove(puzzle *util.Puzzle, pos, d image.Point, dryRun bool) bool {
 	nextRow := puzzle.Board[next.Y]
 
 	// VV: By convention, when moving a box, @pos will always point to the left half of the box
-	freeLeft := nextRow[next.X] == '.'
-	freeRight := nextRow[next.X+1] == '.'
-
 	blockLeft := nextRow[next.X] == '#'
 	blockight := nextRow[next.X+1] == '#'
 
@@ -97,7 +94,7 @@ func verticalMove(puzzle *util.Puzzle, pos, d image.Point, dryRun bool) bool {
 	}
 
 	if !isBox {
-		if freeLeft {
+		if nextRow[next.X] == '.' {
 			return true
 		} else {
 			// VV: We can only get here if there's a box in front of us
@@ -115,82 +112,37 @@ func verticalMove(puzzle *util.Puzzle, pos, d image.Point, dryRun bool) bool {
 			return false
 		}
 	} else {
-		// VV: A box can move if both of its halves can move
-
-		if freeLeft && freeRight {
-			goto commit
-		}
-
 		// VV: We get here, if this box is blocked by 1 or 2 boxes
-
-		if !freeLeft && !freeRight {
-			// VV: There's exaclty 1 box which is aligned with the current one
-			if nextRow[pos.X] == '[' {
-				if verticalMove(puzzle, next, d, dryRun) {
-					goto commit
-				}
+		if nextRow[pos.X] == '[' {
+			// VV: No need to check for nextRow[pos.X+1] == ']' (it implies nextRow[pos.X] == '[')
+			if !verticalMove(puzzle, next, d, dryRun) {
 				return false
 			}
-
-			// VV: There are 2 boxes blocking this one
-			left := next
-			left.X--
-
-			right := next
-			right.X++
-
-			if nextRow[left.X] != '[' || nextRow[right.X] != '[' {
-				panic("unreachable")
-			}
-
-			// VV: If both boxes can move, then so can this one
-			if verticalMove(puzzle, left, d, dryRun) && verticalMove(puzzle, right, d, dryRun) {
-				goto commit
-			}
-		} else if !freeLeft && freeRight {
-			// VV: there's 1 box which is NOT aligned with this one i.e. it's 1 to the right
-			left := next
-			left.X--
-
-			if nextRow[left.X] != '[' {
-				panic("unreachable")
-			}
-
-			if verticalMove(puzzle, left, d, dryRun) {
-				goto commit
-			}
-		} else if freeLeft && !freeRight {
-			// VV: there's 1 box which is NOT aligned with this one i.e. it's 1 to the left
-			right := next
-			right.X++
-
-			if nextRow[right.X] != '[' {
-				panic("unreachable")
-			}
-
-			if verticalMove(puzzle, right, d, dryRun) {
-				goto commit
-			}
-		} else {
-			panic("unreachable")
 		}
+
+		if nextRow[pos.X+1] == '[' {
+			right := next.Add(image.Pt(1, 0))
+			if !verticalMove(puzzle, right, d, dryRun) {
+				return false
+			}
+		}
+
+		if nextRow[pos.X] == ']' {
+			left := next.Add(image.Pt(-1, 0))
+			if !verticalMove(puzzle, left, d, dryRun) {
+				return false
+			}
+		}
+
+		if !dryRun {
+			row := puzzle.Board[pos.Y]
+			x := pos.X
+			row[x], nextRow[x] = nextRow[x], row[x]
+			row[x+1], nextRow[x+1] = nextRow[x+1], row[x+1]
+		}
+
+		return true
 	}
-
-	return false
-
-commit:
-	row := puzzle.Board[pos.Y]
-
-	performMove := func() {
-		x := pos.X
-		row[x], nextRow[x] = nextRow[x], row[x]
-		row[x+1], nextRow[x+1] = nextRow[x+1], row[x+1]
-	}
-
-	if !dryRun {
-		performMove()
-	}
-	return true
 }
 
 func solution(puzzle *util.Puzzle, logger *log.Logger) int {
