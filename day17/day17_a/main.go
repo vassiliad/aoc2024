@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math"
 	"os"
 	"puzzle/util"
 	"strings"
@@ -33,9 +32,8 @@ var OP_LABELS = map[int64]string{
 }
 
 func division(numerator, comboValue int64) int64 {
-	denominator := int64(math.Pow(2, float64(comboValue)))
-	ret := numerator / denominator
-	fmt.Printf("%d / %d = %d", numerator, denominator, ret)
+	ret := numerator >> comboValue
+	fmt.Printf("%d >> %d = %d", numerator, comboValue, ret)
 	return ret
 }
 
