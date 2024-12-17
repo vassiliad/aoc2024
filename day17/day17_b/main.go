@@ -104,28 +104,28 @@ type State struct {
 	found int   // VV: keeps track of how many output's we've found so far
 }
 
+/*
+VV: the puzzle program looks at the rightmost 6 bits of register A and based on those, it:
+
+1. prints a number
+2. decides whether it should loop one more time or not
+
+Multiple 6-bit combinations print the same number.
+
+The solution is to try 6-bit combinations to discover the rightmost 6-bits of A.
+
+The 6-bit combination is wrong when:
+ 1. the program does not produce 2 outputs
+ 2. the 2 outputs it produces are not the ones we expect to find (we start from the rightmost OpCode/Operands
+    and move our way towards the front - these correspond to the left most bits of Alpha)
+ 3. the 2 outputs it produces are the ones we expect BUT the program exits early
+
+We're looking for the minimum value of A, so I'm using a priority queue to keep track of the incomplete Alpha values
+we're trying out. This works because we're building Alpha from the leftmost bits.
+
+Finally, avoid retrying the same bits over over by using a memoization cache
+*/
 func reverseEngineerAlpha(puzzle *util.Puzzle) int64 {
-	/*
-		VV: the puzzle program looks at the rightmost 6 bits of register A and based on those, it:
-
-		1. prints a number
-		2. decides whether it should loop one more time or not
-
-		Multiple 6-bit combinations print the same number.
-
-		The solution is to try 6-bit combinations to discover the rightmost 6-bits of A.
-
-		The 6-bit combination is wrong when:
-		1. the program does not produce 2 outputs
-		2. the 2 outputs it produces are not the ones we expect to find (we start from the rightmost OpCode/Operands
-			and move our way towards the front - these correspond to the left most bits of Alpha)
-		3. the 2 outputs it produces are the ones we expect BUT the program exits early
-
-		We're looking for the minimum value of A, so I'm using a priority queue to keep track of the incomplete Alpha values
-		we're trying out. This works because we're building Alpha from the leftmost bits.
-
-		Finally, avoid retrying the same bits over over by using a memoization cache
-	*/
 	pending := make(util.PriorityQueue, 1)
 
 	pending[0] = &util.HeapItem{
