@@ -17,10 +17,6 @@ func SetupLogger() *log.Logger {
 	return logger
 }
 
-type State struct {
-	pos image.Point
-}
-
 var MAGIC_NUMBER = int(^uint(0) >> 1)
 
 func constructBoard(puzzle *util.Puzzle, width, height int) [][]int {
