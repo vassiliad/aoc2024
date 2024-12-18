@@ -49,7 +49,6 @@ The idea is to avoid tiles on which bytes landed sometime before we started walk
 func findPath(start, end image.Point, board [][]int, width, height, timePathStarts int) bool {
 	gScore := map[image.Point]int{start: 0}
 
-	reversePath := map[image.Point]image.Point{}
 	open := make(util.PriorityQueue, 1)
 
 	open[0] = &util.HeapItem{
@@ -90,7 +89,6 @@ func findPath(start, end image.Point, board [][]int, width, height, timePathStar
 				continue
 			} else {
 				gScore[next] = nextCost
-				reversePath[next] = cur
 
 				updated := false
 
