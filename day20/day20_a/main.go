@@ -121,6 +121,66 @@ func findBestPath(start, end image.Point, board [][]rune, maxCheats int, recordP
 	return -1, []image.Point{}
 }
 
+func cheat(start image.Point, board [][]rune, maxCheats int) map[image.Point]int {
+	// VV: How many times we can walk inside a wall.
+	// So if you're only allowed to cheat twice that means you can ONLY go through 1 wall as you need to spend
+	// 1 of your cheats to walk out of the wall
+	maxCheats = maxCheats - 1
+
+	height := len(board)
+	width := len(board[0])
+
+	initial := start
+	gScore := map[image.Point]int{initial: 0}
+
+	open := make(util.PriorityQueue, 1)
+
+	open[0] = &util.HeapItem{
+		Value:    initial,
+		Priority: 0,
+	}
+	heap.Init(&open)
+
+	reachableTiles := map[image.Point]int{}
+
+	for open.Len() > 0 {
+		heapItem := heap.Pop(&open)
+
+		item := heapItem.(*util.HeapItem)
+
+		cur := item.Value.(image.Point)
+		cost := gScore[cur]
+
+		if cost >= maxCheats {
+			continue
+		}
+
+		nextCost := cost + 1
+
+		for _, d := range deltas {
+			pos := cur.Add(d)
+
+			if pos.Y < 0 || pos.X < 0 || pos.Y >= height || pos.X >= width {
+				continue
+			}
+
+			if board[pos.Y][pos.X] != '#' {
+				reachableTiles[pos] = nextCost
+				continue
+			}
+
+			if knownCost, ok := gScore[pos]; ok && knownCost <= nextCost {
+				continue
+			} else {
+				gScore[pos] = nextCost
+				open.Upsert(pos, nextCost)
+			}
+		}
+	}
+
+	return reachableTiles
+}
+
 func findAllDistances(start image.Point, board [][]rune) map[image.Point]int {
 	height := len(board)
 	width := len(board[0])
@@ -183,6 +243,8 @@ func prettyPrint(puzzle *util.Puzzle, pos, wall, tile image.Point) {
 }
 
 func groupPaths(puzzle *util.Puzzle) map[int]int {
+	const maxCheats = 2
+
 	// VV: First find the path from start to end without cheating
 	shortestPath, tiles := findBestPath(puzzle.Start, puzzle.End, puzzle.Board, 0, true, int(^uint(0)>>1))
 
@@ -192,26 +254,19 @@ func groupPaths(puzzle *util.Puzzle) map[int]int {
 	// VV: Keys are picoseconds saved and values are number of paths
 	groups := map[int]int{}
 
-	width := len(puzzle.Board[0])
-	height := len(puzzle.Board)
-
 	for idx, pos := range tiles {
 		// VV: For each point on the shortest path, find an adjacent wall
 		// and then from that wall find an adjacent tile
 		for _, wallD := range deltas {
 			wall := pos.Add(wallD)
 			if puzzle.Board[wall.Y][wall.X] == '#' {
-				for _, d := range deltas {
-					tile := wall.Add(d)
+				cheatTiles := cheat(wall, puzzle.Board, maxCheats)
+
+				for tile, cheatDistance := range cheatTiles {
 					if tile == pos {
 						continue
 					}
-
-					if tile.X < 0 || tile.Y < 0 || tile.X >= width || tile.Y >= height || puzzle.Board[tile.Y][tile.X] == '#' {
-						continue
-					}
-
-					d, ok := distanceToEnd[tile]
+					distToEnd, ok := distanceToEnd[tile]
 
 					if !ok {
 						// VV: The tile is not connected to the End, cheating didn't help at all
@@ -219,14 +274,14 @@ func groupPaths(puzzle *util.Puzzle) map[int]int {
 					}
 
 					// VV: It takes idx steps to reach the tile on the shortestPath
-					// 1 step to go into the wall and another to exit the wall onto another tile
-					// then it takes d steps to walk to the end
-					distance := d + 1 + 1 + idx
+					// 1 step to go into the wall and cheatTiles to walk around inside the walls
+					// then it takes distToEnd steps to walk to the end
+					distance := idx + 1 + cheatDistance + distToEnd
 
 					saved := shortestPath - distance
 
 					if saved > 0 {
-						groups[saved] = groups[saved] + 1
+						groups[saved]++
 					}
 				}
 			}
