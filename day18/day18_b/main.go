@@ -89,27 +89,7 @@ func findPath(start, end image.Point, board [][]int, width, height, timePathStar
 				continue
 			} else {
 				gScore[next] = nextCost
-
-				updated := false
-
-				for idx, q := range open {
-					if q.Value.(image.Point) == next {
-						updated = true
-
-						q.Priority = nextCost
-						heap.Fix(&open, idx)
-						break
-					}
-				}
-
-				if !updated {
-					t := &util.HeapItem{
-						Value:    next,
-						Priority: nextCost,
-					}
-
-					heap.Push(&open, t)
-				}
+				open.Upsert(next, nextCost)
 			}
 		}
 	}

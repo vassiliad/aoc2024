@@ -46,8 +46,31 @@ func (pq *PriorityQueue) Pop() any {
 }
 
 // update modifies the priority and value of an Item in the queue.
-func (pq *PriorityQueue) Update(item *HeapItem, value string, priority int) {
+func (pq *PriorityQueue) Update(item *HeapItem, value any, priority int) {
 	item.Value = value
 	item.Priority = priority
 	heap.Fix(pq, item.index)
+}
+
+func (pq *PriorityQueue) Upsert(value any, priority int) {
+	updated := false
+
+	for idx, q := range *pq {
+		if q.Value == value {
+			updated = true
+
+			q.Priority = priority
+			heap.Fix(pq, idx)
+			break
+		}
+	}
+
+	if !updated {
+		t := &HeapItem{
+			Value:    value,
+			Priority: priority,
+		}
+
+		heap.Push(pq, t)
+	}
 }
