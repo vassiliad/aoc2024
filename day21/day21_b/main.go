@@ -54,6 +54,14 @@ func computeMovements(buttons [][]rune) map[rune]map[rune][][]rune {
 				continue
 			}
 
+			generateMoves := func(size int, movement rune) []rune {
+				ret := make([]rune, size)
+				for i := range size {
+					ret[i] = movement
+				}
+				return ret
+			}
+
 			for otherY, otherRow := range buttons {
 				for otherX, otherC := range otherRow {
 					if otherC == 'x' {
@@ -65,17 +73,14 @@ func computeMovements(buttons [][]rune) map[rune]map[rune][][]rune {
 					{
 
 						if dx != 0 {
-							step := 1
 							movement := '>'
 
 							if dx < 0 {
-								step = -1
 								movement = '<'
+								dx = -dx
 							}
 
-							for i := x; i != otherX; i += step {
-								movementsHorizontal = append(movementsHorizontal, movement)
-							}
+							movementsHorizontal = generateMoves(dx, movement)
 						}
 
 					}
@@ -84,22 +89,19 @@ func computeMovements(buttons [][]rune) map[rune]map[rune][][]rune {
 					dy := otherY - y
 					{
 						if dy != 0 {
-							step := 1
 							movement := 'v'
 
 							if dy < 0 {
-								step = -1
+								dy = -dy
 								movement = '^'
 							}
 
-							for i := y; i != otherY; i += step {
-								movementsVertical = append(movementsVertical, movement)
-							}
+							movementsVertical = generateMoves(dy, movement)
 						}
 
 					}
 					movements := [][]rune{}
-
+					// VV: If the 2 points are on the same row or column then there's only 1 possible moveset
 					if dx != 0 && dy != 0 {
 						firstHoriz := []rune{}
 						firstHoriz = append(firstHoriz, movementsHorizontal...)
@@ -202,8 +204,7 @@ func countCost(
 	return bestCost
 }
 
-func solution(puzzle *util.Puzzle, logger *log.Logger) uint64 {
-	const numRobots = 25
+func solution(puzzle *util.Puzzle, numRobots int, logger *log.Logger) uint64 {
 
 	buttonsFinal := [][]rune{
 		{'7', '8', '9'},
@@ -256,7 +257,7 @@ func main() {
 		logger.Fatalln("Ran into problems while reading input. Problem", err)
 	}
 
-	sol := solution(puzzle, logger)
+	sol := solution(puzzle, 25, logger)
 
 	logger.Println("Solution is", sol)
 }
